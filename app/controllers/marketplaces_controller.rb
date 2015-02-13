@@ -5,7 +5,7 @@ class MarketplacesController < ApplicationController
   include MarketplaceHelper
   include AppsHelper
   def index
-    if current_user_verify
+   if current_user_verify
       mkp = get_marketplaces
       @mkp_collection = mkp[:mkp_collection]
       if @mkp_collection.class == Megam::Error
@@ -14,7 +14,6 @@ class MarketplacesController < ApplicationController
         @categories=[]
         @order=[]
         @order = @mkp_collection.map {|c|
-      puts c.name
       c.name
       }
         @order = @order.sort_by {|elt| ary = elt.split("-").map(&:to_i); ary[0] + ary[1]}
@@ -23,15 +22,14 @@ class MarketplacesController < ApplicationController
 
       end
     else
-      redirect_to signin_path
+     redirect_to signin_path
     end
   end
 
   def show
     if current_user_verify
       @pro_name = params[:id].split("-")
-      puts @pro_name
-     
+    
       @apps = get_apps
 
       @mkp = GetMarketplaceApp.perform(force_api[:email], force_api[:api_key], params[:id])
@@ -48,7 +46,6 @@ class MarketplacesController < ApplicationController
         @version_order = @mkp.plans.map {|c| c["version"]}
         @version_order = @version_order.sort
 
-        puts @mkp.class
         respond_to do |format|
           format.js {
             respond_with(@mkp, @version_order, @type, :layout => !request.xhr? )
@@ -119,8 +116,7 @@ class MarketplacesController < ApplicationController
     @repos = git_array
     render :template => "apps/new", :locals => {:repos => @repos} 
 
-puts "ENTERING AUTHORIZE SCM---------------------------------"
-puts request.env['omniauth.auth']
+
     #session[:info] = request.env['omniauth.auth']['credentials']
     auth_token = request.env['omniauth.auth']['credentials']['token']
     github = Github.new oauth_token: auth_token
@@ -147,7 +143,6 @@ puts request.env['omniauth.auth']
 def github_sessions
 
 auth_id = params['id']
-puts auth_id
  github = Github.new oauth_token: auth_id
     git_array = github.repos.all.collect { |repo| repo.clone_url }
     @repos = git_array
@@ -166,29 +161,32 @@ render :text => @tokens_gh
 end
 
 def gogs
- puts "tadaaaaa"
- 
- 
 end
 
 def gogswindow
 end
 
 def gogs_return 
-puts params[:gogs_username]
-puts params[:gogs_password]
 
-@token = ListGogsTokens.perform(params[:gogs_username], params[:gogs_password])
-puts @token
-puts "printing tokens!!--------"
-@gogs_repos = ListGogsRepo.perform(@token)
-
+tokens = ListGogsTokens.perform(params[:gogs_username], params[:gogs_password])
+obj = JSON.parse(tokens)
+token = obj[0]["sha1"]
+ 
+@gogs_repos = ListGogsRepo.perform(token)
+    
+    obj_repo = JSON.parse(@gogs_repos)
+   
+    @repos_arr = []
+    
+    obj_repo.each do |one_repo|
+    
+    @repos_arr << one_repo["clone_url"]
+    end
 respond_to do |format|
           format.js {
-            respond_with(@gogs_repos, :layout => !request.xhr? )
+            respond_with(@repos_arr, :layout => !request.xhr?)
           }
         end
- 
 end
   def category_view
     mkp = get_marketplaces
